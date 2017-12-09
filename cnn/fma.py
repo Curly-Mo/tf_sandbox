@@ -64,3 +64,22 @@ def get_dataset():
     x_train_ids = tracks.loc[small & train].index.values
     x_train_files = [path_from_id(x) for x in x_train_ids]
     return x_train_files, y_train, labels
+
+
+def get_dataset_single_genre():
+    filepath = '/Users/colinfahy/personal/tf-sandbox/cnn/data/fma_metadata/tracks.csv'
+    tracks = load(filepath)
+
+    small = tracks['set', 'subset'] <= 'small'
+    train = tracks['set', 'split'] == 'training'
+    # val = tracks['set', 'split'] == 'validation'
+    # test = tracks['set', 'split'] == 'test'
+    genres_filepath = '/Users/colinfahy/personal/tf-sandbox/cnn/data/fma_metadata/genres.csv'
+    genres = load(genres_filepath)
+    labels = {row[3]: {'index': i, 'name': row[3], 'id': row[0]} for i, row in enumerate(genres.itertuples())}
+
+    y_train = tracks.loc[small & train, ('track', 'genre_top')].values
+    y_train = [(v,) for v in y_train]
+    x_train_ids = tracks.loc[small & train].index.values
+    x_train_files = [path_from_id(x) for x in x_train_ids]
+    return x_train_files, y_train, labels

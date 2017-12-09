@@ -1,16 +1,31 @@
+import collections
 import numpy as np
 import librosa
 import fma
 
 
 def one_hot(label_ids, label_dict):
-    indices = [label_dict[id]['index'] for id in label_ids]
+    indices = [label_dict[id] for id in label_ids]
     y = np.zeros([1, len(label_dict)])
     y[0, indices] = 1
     return y
 
 
-def training_features(x_files, y_labels, label_dict):
+def distinct_from_labels(Y):
+    distinct = set()
+    for y in Y:
+        if isinstance(y, str):
+            distinct.add(y)
+        else:
+            for label in y:
+                distinct.add(label)
+    labels = list(set(distinct))
+    label_dict = {label: index for index, label in enumerate(labels)}
+    return labels, label_dict
+
+
+def training_features(x_files, y_labels):
+    labels, label_dict = distinct_from_labels(y_labels)
     win_size = 32
     hop_size = win_size*7//8
     y_train = np.vstack([one_hot(y, label_dict) for y in y_labels])
@@ -21,6 +36,7 @@ def training_features(x_files, y_labels, label_dict):
     for i, (x, y) in enumerate(zip(x_train_spec, y_train)):
         print(i)
         x = split_spec(x, win_size, hop_size)
+        print(x.shape)
         if x is not None:
             X.append(x)
             for i in range(len(x)):
@@ -28,14 +44,15 @@ def training_features(x_files, y_labels, label_dict):
     X = np.vstack(X)
     Y = np.vstack(Y)
 
-    labels = {label['index']: label for label in label_dict.values()}
     return X, Y, labels
 
 
 def mel_spec(audio_path, n_fft=2048):
     print(audio_path)
     y, sr = librosa.load(audio_path, mono=True)
+    y, index = librosa.effects.trim(y)
     melspec = librosa.feature.melspectrogram(y, n_fft=n_fft)
+    print(melspec.T.shape)
     return melspec.T
 
 
@@ -44,14 +61,31 @@ def split_spec(S, win_size, hop_size):
     i = 0
     while i + win_size < len(S):
         x = S[i:i+win_size]
-        X.append(x[np.newaxis, :, :, np.newaxis])
+        X.append(x)
         i += hop_size
     if not X:
         return None
-    return np.vstack(X)
+    return np.stack(X)
 
 
-def load_fma():
-    X, Y, labels = fma.get_dataset()
-    X, Y, labels = training_features(X, Y, labels)
+def load_fma(maxlen=None):
+    X, Y, labels = fma.get_dataset_single_genre()
+    if maxlen:
+        X, Y, labels = training_features(X[:maxlen], Y[:maxlen], labels)
+    else:
+        X, Y, labels = training_features(X, Y, labels)
     return X, Y, labels
+
+
+def balanced_sample(X_in, Y_in):
+    X, Y = [], []
+    max_count = sum(Y)[np.nonzero(sum(Y))].min()
+    counts = collections.defaultdict(int)
+    for x, y in zip(X_in, Y_in):
+        for indices in y.nonzero():
+            if all(counts[i] < max_count for i in indices):
+                X.append(x)
+                Y.append(y)
+                for i in indices:
+                    counts[i] += 1
+    return np.stack(X), np.stack(Y)

@@ -27,26 +27,26 @@ def split_spec(S, win_size, hop_size):
 
 def network(input_shape, output_shape, weight=1.0):
     # Building convolutional net
-    net = input_data(shape=[None, *input_shape], name='input')
-    net = conv_2d(net, 64, [3, 60], activation='relu', regularizer="L2")
+    net = input_data(shape=[None, *input_shape, 1], name='input')
+    net = conv_2d(net, 64, [5, 5], activation='relu', regularizer="L2")
     net = max_pool_2d(net, 2)
-    net = conv_2d(net, 64, [3, 60], activation='relu', regularizer="L2")
+    net = conv_2d(net, 64, [5, 5], activation='relu', regularizer="L2")
     net = max_pool_2d(net, 2)
-    net = fully_connected(net, 128, activation='sigmoid')
+    net = fully_connected(net, 128, activation='relu')
     net = dropout(net, 0.8)
-    net = fully_connected(net, 128, activation='sigmoid')
-    net = dropout(net, 0.8)
-    net = fully_connected(net, output_shape, activation='sigmoid')
+    net = fully_connected(net, output_shape, activation='softmax')
 
     def wloss(y_pred, y_true):
         return tflearn.weighted_crossentropy(y_pred, y_true, weight=weight)
     net = regression(net, optimizer='adam', learning_rate=0.01,
-                     loss='binary_crossentropy', name='target')
+                     loss='categorical_crossentropy', name='target')
     model = tflearn.DNN(net, tensorboard_verbose=3)
     return model
 
 
 def train(model, X, Y, n_epoch=5, batch_size=20):
+    X = X[..., np.newaxis]
+    print(X.shape)
     model.fit({'input': X}, {'target': Y}, n_epoch=n_epoch, batch_size=batch_size,
               # validation_set=({'input': testX}, {'target': testY}),
               show_metric=True)
@@ -87,19 +87,17 @@ def balanced_sample(X_in, Y_in, count):
     return np.stack(X), np.stack(Y)
 
 
-def network_tmp(input_shape, output_shape, weight=1.0):
+def network_tmp(input_shape, output_shape):
     # Building convolutional net
     net = input_data(shape=[None, *input_shape[1:]], name='input')
     net = fully_connected(net, 128, activation='tanh')
     net = dropout(net, 0.8)
     net = fully_connected(net, 128, activation='tanh')
     net = dropout(net, 0.8)
-    net = fully_connected(net, output_shape, activation='sigmoid')
+    net = fully_connected(net, output_shape, activation='softmax')
 
-    def wloss(y_pred, y_true):
-        return tflearn.weighted_crossentropy(y_pred, y_true, weight=weight)
     net = regression(net, optimizer='adam', learning_rate=0.01,
-                     loss='binary_crossentropy', name='target')
+                     loss='categorical_crossentropy', name='target')
     model = tflearn.DNN(net, tensorboard_verbose=3)
     return model
 
