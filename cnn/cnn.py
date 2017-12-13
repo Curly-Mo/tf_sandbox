@@ -1,6 +1,6 @@
 import tflearn
 from tflearn.layers.core import input_data, dropout, fully_connected
-from tflearn.layers.conv import conv_2d, max_pool_2d
+from tflearn.layers.conv import conv_2d, max_pool_2d, global_max_pool
 from tflearn.layers.estimator import regression
 import librosa
 import numpy as np
@@ -27,25 +27,24 @@ def split_spec(S, win_size, hop_size):
 
 def network(input_shape, output_shape, weight=1.0):
     # Building convolutional net
-    net = input_data(shape=[None, *input_shape, 1], name='input')
-    net = conv_2d(net, 64, [5, 5], activation='relu', regularizer="L2")
+    net = input_data(shape=[None, *input_shape], name='input')
+    net = conv_2d(net, 24, [4, 128], activation='relu', regularizer="L2")
     net = max_pool_2d(net, 2)
-    net = conv_2d(net, 64, [5, 5], activation='relu', regularizer="L2")
-    net = max_pool_2d(net, 2)
-    net = fully_connected(net, 128, activation='relu')
+    net = conv_2d(net, 24, [4, 128], activation='relu', regularizer="L2")
+    net = global_max_pool(net)
+    net = fully_connected(net, 2048, activation='relu')
     net = dropout(net, 0.8)
     net = fully_connected(net, output_shape, activation='softmax')
 
     def wloss(y_pred, y_true):
         return tflearn.weighted_crossentropy(y_pred, y_true, weight=weight)
-    net = regression(net, optimizer='adam', learning_rate=0.01,
+    net = regression(net, optimizer='adam', learning_rate=0.001,
                      loss='categorical_crossentropy', name='target')
     model = tflearn.DNN(net, tensorboard_verbose=3)
     return model
 
 
 def train(model, X, Y, n_epoch=5, batch_size=20):
-    X = X[..., np.newaxis]
     print(X.shape)
     model.fit({'input': X}, {'target': Y}, n_epoch=n_epoch, batch_size=batch_size,
               # validation_set=({'input': testX}, {'target': testY}),
@@ -57,7 +56,8 @@ def predict(model, audio_path, labels=None):
     hop_size = win_size*7//8
     S = feature.mel_spec(audio_path)
     X = feature.split_spec(S, win_size, hop_size)
-    y = model.predict(X[0:1])
+    X = X[..., np.newaxis]
+    y = model.predict(X)
     # y = sum(y) / len(y)
     # return labels[y.argmax()]
     return y

@@ -11,6 +11,17 @@ def one_hot(label_ids, label_dict):
     return y
 
 
+def some_hot(label_ids, label_dict):
+    indices = [label_dict[id] for id in label_ids]
+    y = np.zeros([1, len(label_dict)])
+    y[0, indices] = 1/len(label_ids)
+    return y
+
+
+def one_hot_to_some_hot(Y):
+    return Y/Y.sum(axis=1, keepdims=True)
+
+
 def distinct_from_labels(Y):
     distinct = set()
     for y in Y:
@@ -36,14 +47,13 @@ def training_features(x_files, y_labels):
     for i, (x, y) in enumerate(zip(x_train_spec, y_train)):
         print(i)
         x = split_spec(x, win_size, hop_size)
-        print(x.shape)
         if x is not None:
             X.append(x)
             for i in range(len(x)):
                 Y.append(y)
     X = np.vstack(X)
     Y = np.vstack(Y)
-
+    X = X[..., np.newaxis]
     return X, Y, labels
 
 
