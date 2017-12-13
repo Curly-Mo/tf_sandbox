@@ -35,13 +35,22 @@ def distinct_from_labels(Y):
     return labels, label_dict
 
 
+def flatmap(func,  iterable):
+    for item in iterable:
+        try:
+            yield func(item)
+        except:
+            print(f'Unable to {func} {item}')
+            pass
+
+
 def training_features(x_files, y_labels):
     labels, label_dict = distinct_from_labels(y_labels)
     win_size = 64
     hop_size = win_size*15//16
     y_train = np.vstack([one_hot(y, label_dict) for y in y_labels])
 
-    x_train_spec = (mel_spec(x) for x in x_files)
+    x_train_spec = flatmap(mel_spec, x_files)
     X = []
     Y = []
     for i, (x, y) in enumerate(zip(x_train_spec, y_train)):
