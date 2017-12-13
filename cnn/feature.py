@@ -37,8 +37,8 @@ def distinct_from_labels(Y):
 
 def training_features(x_files, y_labels):
     labels, label_dict = distinct_from_labels(y_labels)
-    win_size = 32
-    hop_size = win_size*7//8
+    win_size = 64
+    hop_size = win_size*15//16
     y_train = np.vstack([one_hot(y, label_dict) for y in y_labels])
 
     x_train_spec = (mel_spec(x) for x in x_files)
@@ -57,9 +57,9 @@ def training_features(x_files, y_labels):
     return X, Y, labels
 
 
-def mel_spec(audio_path, n_fft=2048):
+def mel_spec(audio_path, n_fft=2048, sr=11025):
     print(audio_path)
-    y, sr = librosa.load(audio_path, mono=True)
+    y, sr = librosa.load(audio_path, mono=True, sr=sr)
     y, index = librosa.effects.trim(y)
     melspec = librosa.feature.melspectrogram(y, n_fft=n_fft)
     print(melspec.T.shape)
