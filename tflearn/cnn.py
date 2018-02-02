@@ -1,6 +1,7 @@
 import tflearn
 from tflearn.layers.core import input_data, dropout, fully_connected
-from tflearn.layers.conv import conv_2d, max_pool_2d, global_max_pool
+from tflearn.layers.conv import conv_2d, max_pool_2d, global_max_pool, global_avg_pool
+from tflearn.layers.merge_ops import merge
 from tflearn.layers.estimator import regression
 import librosa
 import numpy as np
@@ -8,43 +9,54 @@ import feature
 import collections
 
 
-def mel_spec(audio_path, n_fft=2048):
-    y, sr = librosa.load(audio_path, mono=True)
-    y, index = librosa.effects.trim(y)
-    melspec = librosa.feature.melspectrogram(y, n_fft=n_fft)
-    return melspec.T
-
-
-def split_spec(S, win_size, hop_size):
-    X = []
-    i = 0
-    while i + win_size < len(S):
-        x = S[i:i+win_size]
-        X.append(x[np.newaxis, :, :, np.newaxis])
-        i += hop_size
-    return np.vstack(X)
-
-
-def network(input_shape, output_shape, weight=1.0):
+def network(input_shape, output_shape, weight=1.0, activation='softmax', loss='categorical_crossentropy'):
     # Building convolutional net
     net = input_data(shape=[None, *input_shape], name='input')
-    net = conv_2d(net, 24, [4, 128], activation='relu', regularizer="L2")
+    net = conv_2d(net, 48, [4, 128], activation='relu', regularizer="L2")
     net = max_pool_2d(net, 2)
-    net = conv_2d(net, 24, [4, 128], activation='relu', regularizer="L2")
-    net = global_max_pool(net)
+    net = conv_2d(net, 48, [4, 128], activation='relu', regularizer="L2")
+    net = max_pool_2d(net, 2)
+    net = conv_2d(net, 48, [4, 128], activation='relu', regularizer="L2")
+    global_max = global_max_pool(net)
+    global_average = global_avg_pool(net)
+    net = merge([global_max, global_average], 'concat')
+    net = fully_connected(net, 2048, activation='relu')
+    net = dropout(net, 0.8)
     net = fully_connected(net, 2048, activation='relu')
     net = dropout(net, 0.8)
     net = fully_connected(net, output_shape, activation='softmax')
 
     def wloss(y_pred, y_true):
         return tflearn.weighted_crossentropy(y_pred, y_true, weight=weight)
-    net = regression(net, optimizer='adam', learning_rate=0.001,
+    net = regression(net,
+                     optimizer='adam',
+                     learning_rate=0.001,
+                     loss=loss,
+                     name='target')
+    model = tflearn.DNN(net, tensorboard_verbose=3)
+    return model
+
+
+def network_simple(input_shape, output_shape, weight=1.0):
+    # Building convolutional net
+    net = input_data(shape=[None, *input_shape], name='input')
+    net = conv_2d(net, 128, [4, 128], activation='relu', regularizer="L2")
+    global_max = global_max_pool(net)
+    global_average = global_avg_pool(net)
+    net = merge([global_max, global_average], 'concat')
+    net = fully_connected(net, 2048, activation='relu')
+    net = dropout(net, 0.8)
+    net = fully_connected(net, output_shape, activation='softmax')
+
+    def wloss(y_pred, y_true):
+        return tflearn.weighted_crossentropy(y_pred, y_true, weight=weight)
+    net = regression(net, optimizer='adam', learning_rate=0.01,
                      loss='categorical_crossentropy', name='target')
     model = tflearn.DNN(net, tensorboard_verbose=3)
     return model
 
 
-def train(model, X, Y, n_epoch=5, batch_size=20):
+def train(model, X, Y, n_epoch=10, batch_size=10):
     print(X.shape)
     model.fit({'input': X}, {'target': Y}, n_epoch=n_epoch, batch_size=batch_size,
               # validation_set=({'input': testX}, {'target': testY}),
@@ -52,22 +64,23 @@ def train(model, X, Y, n_epoch=5, batch_size=20):
 
 
 def predict(model, audio_path, labels=None):
-    win_size = 32
-    hop_size = win_size*7//8
+    win_size = 64
+    hop_size = win_size*15//16
     S = feature.mel_spec(audio_path)
     X = feature.split_spec(S, win_size, hop_size)
     X = X[..., np.newaxis]
     y = model.predict(X)
-    # y = sum(y) / len(y)
-    # return labels[y.argmax()]
-    return y
+    Y = reversed(sorted([(i, val) for i, val in enumerate((sum(y)/len(y)))], key=lambda x: x[1]))
+    if labels:
+        Y = [labels[i] for i in Y]
+    return y, Y
 
 
 def main():
     win_size = 32
     audio_path = librosa.util.example_audio_file()
-    S = mel_spec(audio_path)
-    X = split_spec(S, win_size, win_size//4)
+    S = feature.mel_spec(audio_path)
+    X = feature.split_spec(S, win_size, win_size//4)
     Y = np.vstack([0, 1] for _ in X)
     model = network(X.shape[1:], Y.shape[-1])
     train(model, X, Y)

@@ -30,7 +30,7 @@ def distinct_from_labels(Y):
         else:
             for label in y:
                 distinct.add(label)
-    labels = list(set(distinct))
+    labels = sorted(distinct)
     label_dict = {label: index for index, label in enumerate(labels)}
     return labels, label_dict
 
@@ -58,7 +58,7 @@ def training_features(x_files, y_labels):
         x = split_spec(x, win_size, hop_size)
         if x is not None:
             X.append(x)
-            for i in range(len(x)):
+            for _ in range(len(x)):
                 Y.append(y)
     X = np.vstack(X)
     Y = np.vstack(Y)
@@ -71,6 +71,7 @@ def mel_spec(audio_path, n_fft=2048, sr=11025):
     y, sr = librosa.load(audio_path, mono=True, sr=sr)
     y, index = librosa.effects.trim(y)
     melspec = librosa.feature.melspectrogram(y, n_fft=n_fft)
+    melspec = np.float32(melspec)
     print(melspec.T.shape)
     return melspec.T
 
@@ -87,12 +88,12 @@ def split_spec(S, win_size, hop_size):
     return np.stack(X)
 
 
-def load_fma(maxlen=None):
-    X, Y, labels = fma.get_dataset_single_genre()
+def load_fma(type='training', maxlen=None):
+    X, Y, labels = fma.get_dataset(type=type)
     if maxlen:
-        X, Y, labels = training_features(X[:maxlen], Y[:maxlen], labels)
+        X, Y, labels = training_features(X[:maxlen], Y[:maxlen])
     else:
-        X, Y, labels = training_features(X, Y, labels)
+        X, Y, labels = training_features(X, Y)
     return X, Y, labels
 
 

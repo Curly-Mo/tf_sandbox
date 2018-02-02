@@ -3,6 +3,9 @@ import os
 import ast
 
 
+DATA_DIR = '~/datasets/fma'
+
+
 def load(filepath):
 
     filename = os.path.basename(filepath)
@@ -43,46 +46,48 @@ def load(filepath):
         return tracks
 
 
-def path_from_id(id, prefix='data/fma_small'):
+def path_from_id(id, prefix=os.path.join(DATA_DIR, 'fma_small')):
     id = str(id).zfill(6)
     return os.path.join(prefix, id[0:3], id + '.mp3')
 
 
-def get_dataset():
-    filepath = 'data/fma_metadata/tracks.csv'
+def get_dataset(type='training'):
+    filepath = os.path.join(DATA_DIR, 'fma_metadata/tracks.csv')
     tracks = load(filepath)
 
     small = tracks['set', 'subset'] <= 'small'
-    train = tracks['set', 'split'] == 'training'
+    split = tracks['set', 'split'] == type
+    # train = tracks['set', 'split'] == 'training'
     # val = tracks['set', 'split'] == 'validation'
     # test = tracks['set', 'split'] == 'test'
-    genres_filepath = 'data/fma_metadata/genres.csv'
+    genres_filepath = os.path.join(DATA_DIR, 'fma_metadata/genres.csv')
     genres = load(genres_filepath)
     labels = {row[0]: {'index': i, 'name': row[3], 'id': row[0]} for i, row in enumerate(genres.itertuples())}
 
-    y_train  = tracks.loc[small & train, ('track', 'genres_all')].values
+    Y = tracks.loc[small & split, ('track', 'genres_all')].values
     y_labels = []
-    for y in y_train:
+    for y in Y:
         y_labels.append([labels[id]['name'] for id in y])
-    x_train_ids = tracks.loc[small & train].index.values
-    x_train_files = [path_from_id(x) for x in x_train_ids]
-    return x_train_files, y_labels, labels
+    X_ids = tracks.loc[small & split].index.values
+    X_files = [path_from_id(x) for x in X_ids]
+    return X_files, Y, labels
 
 
-def get_dataset_single_genre():
-    filepath = 'data/fma_metadata/tracks.csv'
+def get_dataset_single_genre(type='training'):
+    filepath = os.path.join(DATA_DIR, 'fma_metadata/tracks.csv')
     tracks = load(filepath)
 
     small = tracks['set', 'subset'] <= 'small'
-    train = tracks['set', 'split'] == 'training'
+    split = tracks['set', 'split'] == type
+    # train = tracks['set', 'split'] == 'training'
     # val = tracks['set', 'split'] == 'validation'
     # test = tracks['set', 'split'] == 'test'
-    genres_filepath = 'data/fma_metadata/genres.csv'
+    genres_filepath = os.path.join(DATA_DIR, 'fma_metadata/genres.csv')
     genres = load(genres_filepath)
     labels = {row[3]: {'index': i, 'name': row[3], 'id': row[0]} for i, row in enumerate(genres.itertuples())}
 
-    y_train = tracks.loc[small & train, ('track', 'genre_top')].values
-    y_train = [(v,) for v in y_train]
-    x_train_ids = tracks.loc[small & train].index.values
-    x_train_files = [path_from_id(x) for x in x_train_ids]
-    return x_train_files, y_train, labels
+    Y = tracks.loc[small & split, ('track', 'genre_top')].values
+    Y = [(v,) for v in Y]
+    X_ids = tracks.loc[small & split].index.values
+    X_files = [path_from_id(x) for x in X_ids]
+    return X_files, Y, labels
