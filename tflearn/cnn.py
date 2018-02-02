@@ -5,7 +5,7 @@ from tflearn.layers.merge_ops import merge
 from tflearn.layers.estimator import regression
 import librosa
 import numpy as np
-import feature
+from . import feature
 import collections
 
 
@@ -63,16 +63,19 @@ def train(model, X, Y, n_epoch=10, batch_size=10):
               show_metric=True)
 
 
-def predict(model, audio_path, labels=None):
+def predict(model, audio_path, labels=None, sample=None):
     win_size = 64
     hop_size = win_size*15//16
     S = feature.mel_spec(audio_path)
+    print(S.shape)
     X = feature.split_spec(S, win_size, hop_size)
     X = X[..., np.newaxis]
+    if sample and X.shape[0] > sample:
+        X = X[np.random.choice(X.shape[0], sample, replace=False)]
     y = model.predict(X)
-    Y = reversed(sorted([(i, val) for i, val in enumerate((sum(y)/len(y)))], key=lambda x: x[1]))
+    Y = reversed(sorted([(i, float(val)) for i, val in enumerate((sum(y)/len(y)))], key=lambda x: x[1]))
     if labels:
-        Y = [labels[i] for i in Y]
+        Y = [(labels[i], val) for i, val in Y]
     return y, Y
 
 

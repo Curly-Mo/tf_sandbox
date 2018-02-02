@@ -1,7 +1,7 @@
 import collections
 import numpy as np
 import librosa
-import fma
+from . import fma
 
 
 def one_hot(label_ids, label_dict):
