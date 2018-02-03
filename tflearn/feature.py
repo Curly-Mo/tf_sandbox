@@ -1,7 +1,6 @@
 import collections
 import numpy as np
 import librosa
-from . import fma
 
 
 def one_hot(label_ids, label_dict):
@@ -86,15 +85,6 @@ def split_spec(S, win_size, hop_size):
     if not X:
         return None
     return np.stack(X)
-
-
-def load_fma(type='training', maxlen=None):
-    X, Y, labels = fma.get_dataset(type=type)
-    if maxlen:
-        X, Y, labels = training_features(X[:maxlen], Y[:maxlen])
-    else:
-        X, Y, labels = training_features(X, Y)
-    return X, Y, labels
 
 
 def balanced_sample(X_in, Y_in):
