@@ -69,6 +69,7 @@ def predict(model, audio_path, labels=None, sample=None):
     S = feature.mel_spec(audio_path)
     print(S.shape)
     X = feature.split_spec(S, win_size, hop_size)
+    del S
     X = X[..., np.newaxis]
     if sample and X.shape[0] > sample:
         X = X[np.random.choice(X.shape[0], sample, replace=False)]
