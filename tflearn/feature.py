@@ -65,9 +65,12 @@ def training_features(x_files, y_labels):
     return X, Y, labels
 
 
-def mel_spec(audio_path, n_fft=2048, sr=11025, offset=None, duration=None):
+def mel_spec(audio_path, n_fft=2048, sr=11025, offset=0.0, duration=None):
     print(audio_path)
-    y, sr = librosa.load(audio_path, mono=True, sr=sr, offset=offset, duration=duration)
+    if duration:
+        y, sr = librosa.load(audio_path, mono=True, sr=sr, offset=offset, duration=duration)
+    else:
+        y, sr = librosa.load(audio_path, mono=True, sr=sr, offset=offset)
     y, index = librosa.effects.trim(y)
     melspec = librosa.feature.melspectrogram(y, n_fft=n_fft)
     melspec = np.float32(melspec)
