@@ -63,12 +63,13 @@ def train(model, X, Y, n_epoch=10, batch_size=10):
               show_metric=True)
 
 
-def predict(model, audio_path, labels=None, sample=None):
+def predict(model, audio_path, labels=None, sample=None, offset=None, duration=None):
     win_size = 64
     hop_size = win_size*15//16
-    S = feature.mel_spec(audio_path)
+    S = feature.mel_spec(audio_path, offset=offset, duration=duration)
     print(S.shape)
     X = feature.split_spec(S, win_size, hop_size)
+    print(X.shape)
     del S
     X = X[..., np.newaxis]
     if sample and X.shape[0] > sample:
