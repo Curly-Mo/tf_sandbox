@@ -72,7 +72,7 @@ def mel_spec(audio_path, n_fft=2048, sr=11025, offset=0.0, duration=None):
     else:
         y, sr = librosa.load(audio_path, mono=True, sr=sr, offset=offset)
     y, index = librosa.effects.trim(y)
-    melspec = librosa.feature.melspectrogram(y, n_fft=n_fft)
+    melspec = librosa.feature.melspectrogram(y=y, n_fft=n_fft)
     melspec = np.float32(melspec)
     print(melspec.T.shape)
     return melspec.T

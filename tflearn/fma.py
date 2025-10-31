@@ -1,9 +1,11 @@
-import pandas as pd
 import os
 import ast
+import pathlib
+import pandas as pd
+from pandas.api.types import CategoricalDtype
 
 
-DATA_DIR = '~/datasets/fma'
+DATA_DIR = f'{pathlib.Path.home()}/datasets/fma'
 
 
 def load(filepath):
@@ -35,8 +37,8 @@ def load(filepath):
             tracks[column] = pd.to_datetime(tracks[column])
 
         SUBSETS = ('small', 'medium', 'large')
-        tracks['set', 'subset'] = tracks['set', 'subset'].astype(
-                'category', categories=SUBSETS, ordered=True)
+        cat_type = CategoricalDtype(categories=SUBSETS, ordered=True)
+        tracks['set', 'subset'] = tracks['set', 'subset'].astype(cat_type)
 
         COLUMNS = [('track', 'license'), ('artist', 'bio'),
                    ('album', 'type'), ('album', 'information')]

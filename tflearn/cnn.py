@@ -5,7 +5,7 @@ from tflearn.layers.merge_ops import merge
 from tflearn.layers.estimator import regression
 import librosa
 import numpy as np
-from . import feature
+import feature
 import collections
 
 

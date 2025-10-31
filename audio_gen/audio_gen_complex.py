@@ -3,7 +3,9 @@ import librosa
 import tflearn
 import numpy as np
 import argparse
-import tensorflow as tf
+# import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 
 def features_from_audio(y, sr, n_fft=512, seq_len=400):

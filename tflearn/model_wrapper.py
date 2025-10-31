@@ -4,7 +4,10 @@ import pathlib
 import datetime
 import distutils.dir_util
 
-import tensorflow as tf
+# import tensorflow as tf
+import tflearn
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import dill
 
 MODEL_DIR = 'models'
